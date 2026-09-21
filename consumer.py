@@ -1,9 +1,12 @@
 import json
+import sys
 from confluent_kafka import Consumer
+
+GROUP = sys.argv[1] if len(sys.argv) > 1 else "order-printer"
 
 consumer = Consumer({
 	"bootstrap.servers":"localhost:9092",
-	"group.id": "order-printer",
+	"group.id": GROUP,
 	"auto.offset.reset": "earliest",
         "enable.auto.commit": False,
 })
@@ -13,7 +16,10 @@ def on_assign(consumer,partitions):
     for tp in committed:
         print(f"Assigned partition {tp.partition}, commited offset: {tp.offset}")
 
-consumer.subscribe(["order-events"], on_assign=on_assign)
+def on_revoke(consumer,partitions):
+    print(f"*** REVOKED partitions {[tp.partition for tp in partitions]}")
+
+consumer.subscribe(["order-events"], on_assign=on_assign, on_revoke=on_revoke)
 
 print("waiting for events. Ctrl + C to stop.")
 
